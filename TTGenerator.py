@@ -1,13 +1,15 @@
-
-connectives = ["~", "^", "⌄", "->", "<->"] 
-vars = ["P", "Q", "R"]
+connectives = ["~", "^", "v", "->", "<->"] 
+vars = ["p", "q", "r"]
 matchingBrackets = {"(": ")", "{": "}", "[": "]"}  
+openBrackets = set(matchingBrackets.keys())
+closeBrackets = set(matchingBrackets.values())
 firstVar = []
 secondVar = []
 thirdVar = []
 negationFirstVar = [] 
 negationSecondVar = []
 negationThirdVar= []
+variables = []
 
 rowCount = 0
 valid = True  # Glinobal ko kase para same sa lahat na ng fucking functions
@@ -18,10 +20,18 @@ negateQ = False
 negateR = False
 
 def userInput():
-    statement = input("Enter a statement: ").upper()
+    global variables
+    subStatements = []
+    statement = input("Enter a statement: ").lower()
     words = statement.split()
-    checkParentheses(words)
-    syntaxChecker(words)
+    
+    if checkParentheses(words) and syntaxChecker(words):
+        variables, subStatements = extractPropositions(statement)
+
+        print("Propositional Variables:", variables) #Print test forda variables bes same thing sa bottom
+        print("Sub-statements:", subStatements)
+
+    evaluateStatement(subStatements, variables)
 
 def checkParentheses(words):
     global valid  # Idineclare ko para mamodify dito sa function yung tang-inang global var na yon
@@ -43,14 +53,18 @@ def checkParentheses(words):
         print("Parentheses are not balanced.")
         valid = False
 
+    if valid:
+        return True
+
 def syntaxChecker(words):
     global valid, negateP, negateQ, negateR
-    variables = [] # pagstore'n t variables nga nausar
-    connectivesUsed = [] #pagstore'n t connectives nga nausar
-    negationStack = [] #pagstore'n t negation nga nausar
-    parenthesesUsed = [] #pagstore'n t parentheses nga nausar
+    variables = []  # Store variables used
+    connectivesUsed = []  # Store connectives used
+    negationStack = []  # Store negation used
+    parenthesesUsed = []  # Store parentheses used
     
-    # Syntax check for variables, connectives, and parentheses
+    # To check syntax din by Basilio
+
     for word in words:
         if word.isalpha() and word in vars:  
             variables.append(word)
@@ -73,7 +87,7 @@ def syntaxChecker(words):
             valid = False
             return
 
-    #To check syntax din by Basilio
+    # To check syntax for adjacent variables and connectives 
     for word1, word2 in zip(words, words[1:]):
         if word1 in vars and word2 in vars:
             print("Invalid Statement: Two variables cannot be adjacent.")
@@ -93,14 +107,12 @@ def syntaxChecker(words):
             return
 
     if valid:
-        uniqueVars = set(variables)  # set function para iremove yung duplicates na vars
-        varPopulator(uniqueVars)  # ipopulate ang var based sa count ng unique vars to compute the rows
-        readLogic(variables, connectivesUsed)
-
-def varPopulator(uniqueVars):
-    n = len(uniqueVars)  # exponent determiner base sa uniq na variable kanina
+        uniqueVars = set(variables)  # Remove duplicates from vars
+        varPopulator(len(uniqueVars)) 
+        return True
+        
+def varPopulator(n):
     global rowCount 
-
     rowCount = 2 ** n    # Number ng row sa truth table...tama tong formula dbaaaaaaaa 2^n?
 
     if n == 3:
@@ -144,55 +156,98 @@ def readLogic(variables, connectivesUsed):
     #         print(connectivesUsed[conCount] + " ")
     #         conCount += 1
 
-def printFuckingTable():    
+def extractPropositions(statement):
+
+    print(statement)#test
+    propositions = set()
+    subStatements = []
+    stackOpenBracket = []
+
+    for index, char in enumerate(statement):
+        if char.isalpha() and char != 'v':
+            propositions.add(char)
+
+        if char in openBrackets:
+            stackOpenBracket.append((char, index)) # If open parentheses siya, ilalagay sa stack yung parentheses at yung index bale kung ( p v r) v q 
+                                                   # Unang parenthesis na maencounter is nakastore sa stack na parang [ ( '(' , 0 ) ] since zero yung index
+
+        elif char in closeBrackets:
+
+            if stackOpenBracket: #kung may laman
+
+                latestOpenBracket, start = stackOpenBracket.pop() #kukunin niya yung latest na bracket na nasa top at yung index since two ang value ang nkstore sa stack
+
+                if matchingBrackets[latestOpenBracket] == char: #yung char dito is yung current CLOSING bracket - titignan lang kung kamatch ng open yung close na bracket
+                    subStatements.append(statement[start : index + 1]) #if oo, iadd niya sa substatement from sa index ng latest open bracket to the current index which is index ng closing bracket 
+
+    subStatements.append(statement)
+    return sorted(propositions), subStatements #sorted para magreturn as list yung propositions 
+
+def evaluateStatement(subStatements, variables):
+    results = [[] for _ in subStatements] #magcrecreate ng empty list for every substatements para sa mga results nila
+
+    for i in range(rowCount): 
+        if rowCount == 8:
+            rowValues = {variables[0]: firstVar[i], variables[1]: secondVar[i], variables[2]: thirdVar[i]}  
+
+        if rowCount == 4:
+            rowValues= {variables[0]: firstVar[i], variables[1]: secondVar[i]}
+
+        if rowCount == 2:
+            rowValues = {variables[0]: firstVar[i]}
+
+
+
+        for index, subStatement in enumerate(subStatements):
+            evaluatedResult = evalProposition(subStatement, rowValues) 
+            results[index].append(evaluatedResult)
+
+    printFinalTable(results, subStatements, variables)
+
+def evalProposition(subStatement, rowValues):
+
+    if 'p' in rowValues:
+        subStatement = subStatement.replace("p", rowValues['p'])
+    
+    if 'q' in rowValues:
+        subStatement = subStatement.replace("q", rowValues['q'])
+    
+    if 'r' in rowValues:
+        subStatement = subStatement.replace("r", rowValues['r'])
+
+    subStatement = subStatement.replace("~", " not ").replace("^", " and ").replace("v", " or ")
+    subStatement = subStatement.replace("->", " <= ").replace("<->", " == ")
+
+    return str(eval(subStatement)) #error sa boolean output try niyo nga lagyan ng try and exception para mas specific yung error diko madebug
+
+
+def printFinalTable(results, subStatements, variables):
+
+    #pagprint ng mga header lang
     if rowCount == 8:
-        print(f"{'P':<10} {'Q':<10} {'R':<10}", end = "")  # string formatting based kay w3schools 
-        if negateP:
-            print(f"{'~P':<10}", end = "")
-        if negateQ:
-            print(f"{'~Q':<10}", end = "")
-        if negateR:
-            print(f"{'~R':<10}", end = "")
-        print()
-        print('-' * (30 + 10 * (negateP + negateQ + negateR))) 
-        for i in range(len(firstVar)):
-            print(f"{firstVar[i]:<10} {secondVar[i]:<10} {thirdVar[i]:<10}", end = "")
-            if negateP:
-                print(f"{negationFirstVar[i]:<10}", end = "")
-            if negateQ:
-                print(f"{negationSecondVar[i]:<10}", end = "")
-            if negateR:
-                print(f"{negationThirdVar[i]:<10}", end = "")
-            print()
+        print(f"{variables[0]:<10} {variables[1]:<10} {variables[2]:<10}", end=" ")
 
     elif rowCount == 4:
-        print(f"{'P':<10} {'Q':<10}", end= "") 
-        if negateP:
-            print(f"{'~P':<10}", end = "")
-        if negateQ:
-            print(f"{'~Q':<10}", end = "")
-        print()
-        print('-' * (20 + 10 * (negateP + negateQ)))
-        for i in range(len(firstVar)):
-            print(f"{firstVar[i]:<10} {secondVar[i]:<10}", end = "")
-            if negateP:
-                print(f"{negationFirstVar[i]:<10}", end = "")
-            if negateQ:
-                print(f"{negationSecondVar[i]:<10}", end = "")
-            print()
-
+        print(f"{variables[0]:<10} {variables[1]:<10}", end=" ")
+        
     elif rowCount == 2:
-        print(f"{'P':<10}", end = "")
-        if negateP:
-            print(f"{'~P':<10}", end = "") 
-        print()
-        print('-' * (10 + 10 * (negateP)))
-        for i in range(len(firstVar)):
-            print(f"{firstVar[i]:<10}", end = "")
-            if negateP:
-                print(f"{negationFirstVar[i]:<10}", end = "")
-            print()
+        print(f"{variables[0]:<10}", end=" ")
 
+    header = " ".join([f"{sub:<15}" for sub in subStatements])
+    print(header)
+    
+    totalWidth = 10 * (3 if rowCount == 8 else (2 if rowCount == 4 else 1)) + len(header)
+    print('-' * totalWidth)
+
+    for i in range(rowCount):
+        if rowCount == 8:
+            print(f"{firstVar[i]:<10} {secondVar[i]:<10} {thirdVar[i]:<10}", end=" ")
+        elif rowCount == 4:
+            print(f"{firstVar[i]:<10} {secondVar[i]:<10}", end=" ")
+        elif rowCount == 2:
+            print(f"{firstVar[i]:<10}", end=" ")
+
+        row = " ".join([f"{results[j][i]:<15}" for j in range(len(subStatements))])
+        print(row)
 # Entry point ng putang-inang user
 userInput()
-printFuckingTable()
