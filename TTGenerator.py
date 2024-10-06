@@ -1,14 +1,19 @@
+
 connectives = ["~", "^", "v", "->", "<->"] 
 vars = ["p", "q", "r"]
-matchingBrackets = {"(": ")", "{": "}", "[": "]"}  
+matchingBrackets = {"(": ")"}  
+
 openBrackets = set(matchingBrackets.keys())
 closeBrackets = set(matchingBrackets.values())
+
 firstVar = []
 secondVar = []
 thirdVar = []
+
 negationFirstVar = [] 
 negationSecondVar = []
 negationThirdVar= []
+
 variables = []
 
 rowCount = 0
@@ -83,7 +88,7 @@ def syntaxChecker(words):
         elif word in matchingBrackets.keys() or word in matchingBrackets.values():
             parenthesesUsed.append(word)
         else:
-            print("Invalid syntax detected.")
+            print("Invalid Statement: Invalid syntax detected.")
             valid = False
             return
 
@@ -139,23 +144,6 @@ def calculateNegations():
     negationSecondVar = ["False" if temp == "True" else "True" for temp in secondVar] if negateQ else []
     negationThirdVar = ["False" if temp == "True" else "True" for temp in thirdVar] if negateR else []
 
-def readLogic(variables, connectivesUsed):
-
-    print("Test")
-    # conCount = 0
-    # varCount = 0
-    # while varCount < len(variables) or conCount < len(connectivesUsed):
-    #     if conCount < len(connectivesUsed) and connectivesUsed[conCount] == "not":
-    #         print(connectivesUsed[conCount] + " " + variables[varCount])
-    #         conCount += 1
-    #         varCount += 1
-    #     elif varCount < len(variables) and varCount <= conCount:
-    #         print(variables[varCount] + " ")
-    #         varCount += 1
-    #     if conCount < len(connectivesUsed):
-    #         print(connectivesUsed[conCount] + " ")
-    #         conCount += 1
-
 def extractPropositions(statement):
 
     print(statement)#test
@@ -196,8 +184,6 @@ def evaluateStatement(subStatements, variables):
         if rowCount == 2:
             rowValues = {variables[0]: firstVar[i]}
 
-
-
         for index, subStatement in enumerate(subStatements):
             evaluatedResult = evalProposition(subStatement, rowValues) 
             results[index].append(evaluatedResult)
@@ -206,17 +192,21 @@ def evaluateStatement(subStatements, variables):
 
 def evalProposition(subStatement, rowValues):
 
+    if 'r' in rowValues:
+        subStatement = subStatement.replace("r", rowValues['r'])
+        # key r will be evaluated first and will be replaced by corresponding value
+        # if otherwise, p and q which truth values happen to be True will have it's r be replaced with r's value
+        # leading to errors such as TTrueue and TFalseue
+        
     if 'p' in rowValues:
         subStatement = subStatement.replace("p", rowValues['p'])
     
     if 'q' in rowValues:
         subStatement = subStatement.replace("q", rowValues['q'])
     
-    if 'r' in rowValues:
-        subStatement = subStatement.replace("r", rowValues['r'])
 
     subStatement = subStatement.replace("~", " not ").replace("^", " and ").replace("v", " or ")
-    subStatement = subStatement.replace("->", " <= ").replace("<->", " == ")
+    subStatement = subStatement.replace("<->", " is ").replace("->", " <= ")
 
     return str(eval(subStatement)) #error sa boolean output try niyo nga lagyan ng try and exception para mas specific yung error diko madebug
 
@@ -251,3 +241,4 @@ def printFinalTable(results, subStatements, variables):
         print(row)
 # Entry point ng putang-inang user
 userInput()
+        
