@@ -36,7 +36,7 @@ def userInput():
         print("Propositional Variables:", variables) #Print test forda variables bes same thing sa bottom
         print("Sub-statements:", subStatements)
 
-    evaluateStatement(subStatements, variables)
+        evaluateStatement(subStatements, variables)
 
 def checkParentheses(words):
     global valid  # Idineclare ko para mamodify dito sa function yung tang-inang global var na yon
@@ -55,11 +55,13 @@ def checkParentheses(words):
     if not stackParentheses:  
         print("Parentheses are balanced.")
     else:
-        print("Parentheses are not balanced.")
+        print("Invalid Statement: Parantheis are not balanced")
         valid = False
 
     if valid:
         return True
+    else:
+        return False
 
 def syntaxChecker(words):
     global valid, negateP, negateQ, negateR
