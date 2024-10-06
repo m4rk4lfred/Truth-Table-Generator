@@ -30,7 +30,7 @@ def userInput():
     statement = input("Enter a statement: ").lower()
     words = statement.split()
     
-    if checkParentheses(words) and syntaxChecker(words):
+    if syntaxChecker(words) and checkParentheses(words):
         variables, subStatements = extractPropositions(statement)
 
         print("Propositional Variables:", variables) #Print test forda variables bes same thing sa bottom
@@ -66,8 +66,6 @@ def syntaxChecker(words):
     variables = []  # Store variables used
     connectivesUsed = []  # Store connectives used
     negationStack = []  # Store negation used
-    
-    # To check syntax din by Basilio
 
     for index, word in enumerate(words):
         if word.isalpha() and word in vars:  
@@ -90,7 +88,7 @@ def syntaxChecker(words):
                     print("Invalid Statement: Connective cannot follow an Open Parenthesis.") #this solves issues like ( p ( ^ q ))
                     valid = False
                     return
-            if words[index + 1] in matchingBrackets.values():
+                if words[index + 1] in matchingBrackets.values():
                     print("Invalid Statement: Parentheses cannot be empty.") # handles empty parentheses like ( ( ) ( p ^ q ) )
                     valid = False
                     return
@@ -99,8 +97,20 @@ def syntaxChecker(words):
                     print("Invalid Statement: Closed Parenthesis cannot be preceeded by a connective.") #this solves issues like ( p ^ ) q 
                     valid = False
                     return
+        elif word[0] == "~" and len(word) > 1: 
+             print("Invalid Statement: Negations should be separated with a space. Maybe try ~ " + " ".join(word[1:].upper()) + "?") #guides the user to our program's syntax
+             valid = False
+             return
+        elif word[0] == "(" and len(word) > 1: 
+             print("Invalid Statement: Parenthesis should be separated with a space. Maybe try \"( " + " ".join(word[1:].upper())  + "\"?") #guides the user to our program's syntax
+             valid = False
+             return
+        elif word[-1] == ")" and len(word) > 1: 
+             print("Invalid Statement: Parenthesis should be separated with a space. Maybe try \"" + " ".join(word[:-2].upper())+ " )\"?") #guides the user to our program's syntax
+             valid = False
+             return
         else:
-            print("Invalid Statement: Invalid syntax detected. due to " + word)
+            print("Invalid Statement: Invalid syntax detected. " + word + " not recgonized")
             valid = False
             return
         
@@ -127,6 +137,10 @@ def syntaxChecker(words):
     for word1, word2 in zip(wordList, wordList[1:]):
         if word1 in vars and word2 in vars:
             print("Invalid Statement: Two variables cannot be adjacent.") # handles inputs like " p p ^ p "
+            valid = False
+            return
+        if word1 in vars and word2 == "~":
+            print("Invalid Statement: Negation cannot proceed a variable.") # handles inputs like " ~ p ~ q "
             valid = False
             return
         if word1 in connectives and word2 in connectives and word2 != "~":
@@ -274,4 +288,3 @@ def printFinalTable(results, subStatements, variables):
 # Entry point ng putang-inang user
 
 userInput()
-        
