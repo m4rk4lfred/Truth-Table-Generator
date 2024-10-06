@@ -57,6 +57,7 @@ def userInput():
     global variables
     subStatements = []
     statement = statementFromFile()
+    #statement = input("Enter a statement: ").lower()
     words = statement.split()
     
     if syntaxChecker(words) and checkParentheses(words):
@@ -138,6 +139,10 @@ def syntaxChecker(words):
              print("Invalid Statement: Parenthesis should be separated with a space. Maybe try \"" + " ".join(word[:-1].upper())+ " )\"?") #guides the user to our program's syntax
              valid = False
              return
+        elif word.isalpha():
+            print("Invalid Statement: As much as we want to accept \"" + word + "\" Please enter P, Q or R as statements only. ") #guides the user to our program's syntax
+            valid = False
+            return
         else:
             print("Invalid Statement: Invalid syntax detected. " + word + " not recgonized")
             valid = False
@@ -230,17 +235,17 @@ def extractPropositions(statement):
 
     for index, char in enumerate(statement):
         
-        if checkNegatedCompound:
+        if checkNegatedCompound:        # if Negation or ~ was detected, check for next element if it's parenthesis
             if statement[index] == " ":
                 continue
-            elif statement[index] == "(":
+            elif statement[index] == "(":   #if it is, negate the next substatement like ~ ( P v Q )
                 negateSubStatement = True
                 checkNegatedCompound = False
             else:
-                checkNegatedCompound = False
+                checkNegatedCompound = False  #if not, it's likely a proposition like ~ P
         
         if char == "~":
-            checkNegatedCompound = True
+            checkNegatedCompound = True #check if compound is to be negated
             
         if char.isalpha() and char != 'v':
             propositions.add(char)
@@ -259,7 +264,7 @@ def extractPropositions(statement):
                     subst = statement[start : index + 1]
                     subStatements.append(subst) #if oo, iadd niya sa substatement from sa index ng latest open bracket to the current index which is index ng closing bracket 
                     
-                    if negateSubStatement:
+                    if negateSubStatement:  #negates the substatement if there's a ~ prior to it
                         subst = "~ " + subst
                         negateSubStatement = False
                         subStatements.append(subst)
