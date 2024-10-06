@@ -144,10 +144,11 @@ def syntaxChecker(words):
             return
         
     wordList = [word for word in words if word not in matchingBrackets.keys() and word not in matchingBrackets.values()]
-    #copy of the list of words
-    #this makes sure checking of adjacent variables and connectives will go smoothly
+    # copy of the list of words
+    # this makes sure checking of adjacent variables and connectives will go smoothly
+    # like in p -> q ( r -> r ) where q and r are adjacent
     # this allows ( ( ) ^ q ) and ( ( q ) q ) to be checked properly
-    #only removes from the copy
+    # only removes from the copy
     # also allows instances like ( ) to be marked as invalid
     
     if len(wordList) == 0:
