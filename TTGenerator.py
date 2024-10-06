@@ -11,7 +11,7 @@ secondVar = []
 thirdVar = []
 
 negationFirstVar = [] 
-negationSecondVar = []
+negationSecondVar = [] 
 negationThirdVar= []
 
 variables = []
@@ -51,8 +51,7 @@ def statementFromFile():
     except FileNotFoundError:
         print("File was not found")
         sys.exit()
-    
-
+        
 
 def userInput():
     global variables
@@ -97,23 +96,21 @@ def syntaxChecker(words):
     global valid, negateP, negateQ, negateR
     variables = []  # Store variables used
     connectivesUsed = []  # Store connectives used
-    negationStack = []  # Store negation used
 
     for index, word in enumerate(words):
         if word.isalpha() and word in vars:  
             variables.append(word)
-            if negationStack and negationStack[-1]:
-                if word == "p":
-                    negateP = True
-                elif word == "q":
-                    negateQ = True
-                elif word == "r":
-                    negateR = True
-                negationStack.pop() 
         elif word in connectives: 
             connectivesUsed.append(word)
             if word == "~":
-                negationStack.append(True)
+                if words[index + 1] in vars:
+                    if words[index + 1] == "p":
+                        negateP = True
+                    elif words[index + 1] == "q":
+                        negateQ = True
+                    elif words[index + 1] == "r":
+                        negateR = True
+                
         elif word in matchingBrackets.keys() or word in matchingBrackets.values():
             if word in matchingBrackets.keys():
                 if words[index + 1] in connectives and words[index + 1] != "~":
@@ -223,12 +220,27 @@ def calculateNegations():
 
 def extractPropositions(statement):
 
-    print(statement)#test
+    print(statement)
     propositions = set()
     subStatements = []
     stackOpenBracket = []
+    negateSubStatement = False
+    checkNegatedCompound = False
 
     for index, char in enumerate(statement):
+        
+        if checkNegatedCompound:
+            if statement[index] == " ":
+                continue
+            elif statement[index] == "(":
+                negateSubStatement = True
+                checkNegatedCompound = False
+            else:
+                checkNegatedCompound = False
+        
+        if char == "~":
+            checkNegatedCompound = True
+            
         if char.isalpha() and char != 'v':
             propositions.add(char)
 
@@ -243,9 +255,16 @@ def extractPropositions(statement):
                 latestOpenBracket, start = stackOpenBracket.pop() #kukunin niya yung latest na bracket na nasa top at yung index since two ang value ang nkstore sa stack
 
                 if matchingBrackets[latestOpenBracket] == char: #yung char dito is yung current CLOSING bracket - titignan lang kung kamatch ng open yung close na bracket
-                    subStatements.append(statement[start : index + 1]) #if oo, iadd niya sa substatement from sa index ng latest open bracket to the current index which is index ng closing bracket 
+                    subst = statement[start : index + 1]
+                    subStatements.append(subst) #if oo, iadd niya sa substatement from sa index ng latest open bracket to the current index which is index ng closing bracket 
+                    
+                    if negateSubStatement:
+                        subst = "~ " + subst
+                        negateSubStatement = False
+                        subStatements.append(subst)
 
     subStatements.append(statement)
+        
     return sorted(propositions), subStatements #sorted para magreturn as list yung propositions 
 
 def evaluateStatement(subStatements, variables):
@@ -269,54 +288,79 @@ def evaluateStatement(subStatements, variables):
 
 def evalProposition(subStatement, rowValues):
 
-    if 'r' in rowValues:
-        subStatement = subStatement.replace("r", rowValues['r'])
-        # key r will be evaluated first and will be replaced by corresponding value
-        # if otherwise, p and q which truth values happen to be True will have it's r be replaced with r's value
-        # leading to errors such as TTrueue and TFalseue
+    try:
         
-    if 'p' in rowValues:
-        subStatement = subStatement.replace("p", rowValues['p'])
-    
-    if 'q' in rowValues:
-        subStatement = subStatement.replace("q", rowValues['q'])
-    
+        if 'r' in rowValues:
+            subStatement = subStatement.replace("r", rowValues['r'])
+            # key r will be evaluated first and will be replaced by corresponding value
+            # if otherwise, p and q which truth values happen to be True will have it's r be replaced with r's value
+            # leading to errors such as TTrueue and TFalseue
+            
+        if 'p' in rowValues:
+            subStatement = subStatement.replace("p", rowValues['p'])
+        
+        if 'q' in rowValues:
+            subStatement = subStatement.replace("q", rowValues['q'])
+        
+        subStatement = subStatement.replace("~", " not ")  
+        subStatement = subStatement.replace("^", " and ")    
+        subStatement = subStatement.replace("v", " or ")     
+        subStatement = subStatement.replace("<->", " is ")   
+        subStatement = subStatement.replace("->", " <= ") 
 
-    subStatement = subStatement.replace("~", " not ").replace("^", " and ").replace("v", " or ")
-    subStatement = subStatement.replace("<->", " is ").replace("->", " <= ")
-
-    return str(eval(subStatement)) #error sa boolean output try niyo nga lagyan ng try and exception para mas specific yung error diko madebug
+        return str(eval(subStatement)) #error sa boolean output try niyo nga lagyan ng try and exception para mas specific yung error diko madebug
+    except Exception as e:
+        return f"Error: {str(e)}"
 
 
 def printFinalTable(results, subStatements, variables):
 
-    #pagprint ng mga header lang
-    if rowCount == 8:
-        print(f"{variables[0]:<10} {variables[1]:<10} {variables[2]:<10}", end=" ")
+    headers = []
 
-    elif rowCount == 4:
-        print(f"{variables[0]:<10} {variables[1]:<10}", end=" ")
-        
-    elif rowCount == 2:
-        print(f"{variables[0]:<10}", end=" ")
+    if 'p' in variables:
+        headers.append("p")
+    if 'q' in variables:
+        headers.append("q")
+    if 'r' in variables:
+        headers.append("r")
+    if negateP:
+        headers.append("~p")
+    if negateQ:
+        headers.append("~q")
+    if negateR:
+        headers.append("~r")
 
+    # Print headers for truth table.
+    print(" ".join([f"{header:<10}" for header in headers]), end=" ")
+
+    # Print sub-statements in the table header.
     header = " ".join([f"{sub:<15}" for sub in subStatements])
     print(header)
-    
-    totalWidth = 10 * (3 if rowCount == 8 else (2 if rowCount == 4 else 1)) + len(header)
+
+    totalWidth = 10 * len(headers) + len(header)
     print('-' * totalWidth)
 
     for i in range(rowCount):
+        row = []
+        # Print truth values for variables.
         if rowCount == 8:
             print(f"{firstVar[i]:<10} {secondVar[i]:<10} {thirdVar[i]:<10}", end=" ")
         elif rowCount == 4:
             print(f"{firstVar[i]:<10} {secondVar[i]:<10}", end=" ")
         elif rowCount == 2:
             print(f"{firstVar[i]:<10}", end=" ")
+        if negateP:
+            row.append(f"{negationFirstVar[i]:<10}")
+        if negateQ:
+            row.append(f"{negationSecondVar[i]:<10}")
+        if negateR:
+            row.append(f"{negationThirdVar[i]:<10}")
 
-        row = " ".join([f"{results[j][i]:<15}" for j in range(len(subStatements))])
-        print(row)
+        print(" ".join(row), end=" ")
+
+        # Print results for each sub-statement.
+        resultRow = " ".join([f"{results[j][i]:<15}" for j in range(len(subStatements))])
+        print(resultRow)
         
 # Entry point ng putang-inang user
-
 userInput()
