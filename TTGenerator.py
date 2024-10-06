@@ -1,4 +1,4 @@
-
+import sys
 connectives = ["~", "^", "v", "->", "<->"] 
 vars = ["p", "q", "r"]
 matchingBrackets = {"(": ")"}  
@@ -24,10 +24,36 @@ negateP = False
 negateQ = False
 negateR = False
 
+def statementFromFile():
+    try:
+      file = open("sentence.txt","rt")
+      lines = file.readlines()
+      logStatementCount = 0
+      statement = []
+
+      for line in lines:
+         strippedLine = line.strip()
+         if strippedLine != "":
+           statement.append(strippedLine)
+           logStatementCount+=1
+         else:
+            pass
+         
+      if logStatementCount < 2:
+        statementToReturn = statement[0]
+        return statementToReturn.lower()
+      else:
+         raise ValueError(f"We found {logStatementCount}, input 1 statement only")
+              
+    except ValueError as Ve:
+        print(f"Invalid Number of Inputs: {Ve}") 
+        sys.exit()
+
+
 def userInput():
     global variables
     subStatements = []
-    statement = input("Enter a statement: ").lower()
+    statement = statementFromFile()
     words = statement.split()
     
     if syntaxChecker(words) and checkParentheses(words):
@@ -53,7 +79,7 @@ def checkParentheses(words):
                 return False  
 
     if not stackParentheses:  
-        print("Parentheses are balanced.")
+        pass
     else:
         print("Invalid Statement: Parantheis are not balanced")
         valid = False
