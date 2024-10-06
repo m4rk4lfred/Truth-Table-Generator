@@ -106,7 +106,7 @@ def syntaxChecker(words):
              valid = False
              return
         elif word[-1] == ")" and len(word) > 1: 
-             print("Invalid Statement: Parenthesis should be separated with a space. Maybe try \"" + " ".join(word[:-2].upper())+ " )\"?") #guides the user to our program's syntax
+             print("Invalid Statement: Parenthesis should be separated with a space. Maybe try \"" + " ".join(word[:-1].upper())+ " )\"?") #guides the user to our program's syntax
              valid = False
              return
         else:
