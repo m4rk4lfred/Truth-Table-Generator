@@ -90,6 +90,10 @@ def syntaxChecker(words):
                     print("Invalid Statement: Connective cannot follow an Open Parenthesis.") #this solves issues like ( p ( ^ q ))
                     valid = False
                     return
+            if words[index + 1] in matchingBrackets.values():
+                    print("Invalid Statement: Parentheses cannot be empty.") # handles empty parentheses like ( ( ) ( p ^ q ) )
+                    valid = False
+                    return
             if word in matchingBrackets.values():
                 if words[index - 1] in connectives:
                     print("Invalid Statement: Closed Parenthesis cannot be preceeded by a connective.") #this solves issues like ( p ^ ) q 
