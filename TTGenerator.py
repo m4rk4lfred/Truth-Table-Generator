@@ -17,7 +17,7 @@ negationThirdVar= []
 variables = []
 
 rowCount = 0
-valid = True  # Glinobal ko kase para same sa lahat na ng fucking functions
+valid = True  # Glinobal ko kase para same sa lahat na ng fucking functions, (cge po)
 
 # Flag to check if P Q R is negated
 negateP = False 
@@ -66,19 +66,18 @@ def syntaxChecker(words):
     variables = []  # Store variables used
     connectivesUsed = []  # Store connectives used
     negationStack = []  # Store negation used
-    parenthesesUsed = []  # Store parentheses used
     
     # To check syntax din by Basilio
 
-    for word in words:
+    for index, word in enumerate(words):
         if word.isalpha() and word in vars:  
             variables.append(word)
             if negationStack and negationStack[-1]:
-                if word == "P":
+                if word == "p":
                     negateP = True
-                elif word == "Q":
+                elif word == "q":
                     negateQ = True
-                elif word == "R":
+                elif word == "r":
                     negateR = True
                 negationStack.pop() 
         elif word in connectives: 
@@ -86,28 +85,56 @@ def syntaxChecker(words):
             if word == "~":
                 negationStack.append(True)
         elif word in matchingBrackets.keys() or word in matchingBrackets.values():
-            parenthesesUsed.append(word)
+            if word in matchingBrackets.keys():
+                if words[index + 1] in connectives and words[index + 1] != "~":
+                    print("Invalid Statement: Connective cannot follow an Open Parenthesis.") #this solves issues like ( p ( ^ q ))
+                    valid = False
+                    return
+            if word in matchingBrackets.values():
+                if words[index - 1] in connectives:
+                    print("Invalid Statement: Closed Parenthesis cannot be preceeded by a connective.") #this solves issues like ( p ^ ) q 
+                    valid = False
+                    return
         else:
-            print("Invalid Statement: Invalid syntax detected.")
+            print("Invalid Statement: Invalid syntax detected. due to " + word)
             valid = False
             return
+        
+    wordList = [word for word in words if word not in matchingBrackets.keys() and word not in matchingBrackets.values()]
+    #copy of the list of words
+    #this makes sure checking of adjacent variables and connectives will go smoothly
+    # this allows ( ( ) ^ q ) and ( ( q ) q ) to be checked properly
+    #only removes from the copy
+    # also allows instances like ( ) to be marked as invalid
+    
+    if len(wordList) == 0:
+        print("Invalid Statement: no variables or connectives detected")
+        valid = False
+        return
+    # handles "( )" and other empty inputs
+    
+    if len(wordList) == 1 and wordList[0] in connectives:
+        print("Invalid Statement: cannot evaluate a connective by itself")
+        valid = False
+        return
+    # handles input that is just one connective
 
     # To check syntax for adjacent variables and connectives 
-    for word1, word2 in zip(words, words[1:]):
+    for word1, word2 in zip(wordList, wordList[1:]):
         if word1 in vars and word2 in vars:
-            print("Invalid Statement: Two variables cannot be adjacent.")
+            print("Invalid Statement: Two variables cannot be adjacent.") # handles inputs like " p p ^ p "
             valid = False
             return
         if word1 in connectives and word2 in connectives and word2 != "~":
-            print("Invalid Statement: Two connectives cannot be adjacent.")
+            print("Invalid Statement: Two connectives cannot be adjacent.") #handles inputs like " p ^ v p"
             valid = False
             return
-        if words[-1] in connectives:
-            print("Invalid Statement: The last word cannot be a connective.")
+        if wordList[-1] in connectives:
+            print("Invalid Statement: The last word cannot be a connective.") # handles inputs like " p ^ "
             valid = False
             return
-        if words[0] in connectives and words[0] != "~":
-            print("Invalid Statement: The first word cannot be a connective.")
+        if wordList[0] in connectives and wordList[0] != "~":
+            print("Invalid Statement: The first word cannot be a connective.") # handles inputs like " ^ p"
             valid = False
             return
 
@@ -239,6 +266,8 @@ def printFinalTable(results, subStatements, variables):
 
         row = " ".join([f"{results[j][i]:<15}" for j in range(len(subStatements))])
         print(row)
+        
 # Entry point ng putang-inang user
+
 userInput()
         
