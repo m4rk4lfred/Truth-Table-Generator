@@ -56,8 +56,8 @@ def statementFromFile():
 def userInput():
     global variables
     subStatements = []
-    statement = statementFromFile()
-    #statement = input("Enter a statement: ").lower()
+    # statement = statementFromFile()
+    statement = input("Enter a statement: ").lower()
     words = statement.split()
     
     if syntaxChecker(words) and checkParentheses(words):
@@ -224,6 +224,12 @@ def calculateNegations():
     negationSecondVar = ["False" if temp == "True" else "True" for temp in secondVar] if negateQ else []
     negationThirdVar = ["False" if temp == "True" else "True" for temp in thirdVar] if negateR else []
 
+def removeParentheses(subst):
+
+        while subst.startswith("(") and subst.endswith(")"):
+            subst = subst[1:-1].strip()
+        return f"({subst})" if subst else ""
+
 def extractPropositions(statement):
 
     print(statement)
@@ -232,6 +238,7 @@ def extractPropositions(statement):
     stackOpenBracket = []
     negateSubStatement = False
     checkNegatedCompound = False
+    processedStatements = set()
 
     for index, char in enumerate(statement):
         
@@ -251,26 +258,29 @@ def extractPropositions(statement):
             propositions.add(char)
 
         if char in openBrackets:
-            stackOpenBracket.append((char, index)) # If open parentheses siya, ilalagay sa stack yung parentheses at yung index bale kung ( p v r) v q 
-                                                   # Unang parenthesis na maencounter is nakastore sa stack na parang [ ( '(' , 0 ) ] since zero yung index
+            stackOpenBracket.append(index)# If open parentheses siya, ilalagay sa stack yung parentheses at yung index bale kung ( p v r) v q 
+                                        
 
-        elif char in closeBrackets:
+        elif char in closeBrackets and stackOpenBracket:
+                start = stackOpenBracket.pop()
+                subst = statement[start : index + 1]
 
-            if stackOpenBracket: #kung may laman
+                normalizedSubst = removeParentheses(subst)
 
-                latestOpenBracket, start = stackOpenBracket.pop() #kukunin niya yung latest na bracket na nasa top at yung index since two ang value ang nkstore sa stack
+                if normalizedSubst not in processedStatements:
+                    subStatements.append(normalizedSubst) 
+                    processedStatements.add(normalizedSubst)  # Track to avoid duplicates
 
-                if matchingBrackets[latestOpenBracket] == char: #yung char dito is yung current CLOSING bracket - titignan lang kung kamatch ng open yung close na bracket
-                    subst = statement[start : index + 1]
-                    subStatements.append(subst) #if oo, iadd niya sa substatement from sa index ng latest open bracket to the current index which is index ng closing bracket 
-                    
-                    if negateSubStatement:  #negates the substatement if there's a ~ prior to it
-                        subst = "~ " + subst
+                    if negateSubStatement: #negates the substatement if there's a ~ prior to it
+                        negatedSubst = "~" + normalizedSubst
+                        if negatedSubst not in processedStatements:
+                            subStatements.append(negatedSubst)
+                            processedStatements.add(negatedSubst)
                         negateSubStatement = False
-                        subStatements.append(subst)
 
-    subStatements.append(statement)
-        
+    normalizedStatement = removeParentheses(statement)
+    if normalizedStatement not in processedStatements:
+        subStatements.append(statement)     
     return sorted(propositions), subStatements #sorted para magreturn as list yung propositions 
 
 def evaluateStatement(subStatements, variables):
