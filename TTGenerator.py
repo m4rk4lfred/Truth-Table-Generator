@@ -228,7 +228,7 @@ def removeParentheses(subst):
 
         while subst.startswith("(") and subst.endswith(")"):
             subst = subst[1:-1].strip()
-        return f"({subst})" if subst else ""
+        return f"( {subst} )" if subst else ""
 
 def extractPropositions(statement):
 
@@ -258,11 +258,13 @@ def extractPropositions(statement):
             propositions.add(char)
 
         if char in openBrackets:
-            stackOpenBracket.append(index)# If open parentheses siya, ilalagay sa stack yung parentheses at yung index bale kung ( p v r) v q 
+            stackOpenBracket.append((index, negateSubStatement))  # If open parentheses siya, ilalagay sa stack yung parentheses at yung index bale kung ( p v r) v q 
+            negateSubStatement = False #this tracks and resets negation status to be retrieved when we reach the end of the statement
+            #this fix errors later on that would happen with ~ ( p ^ ( q v r )) if this statements were not added
                                         
 
         elif char in closeBrackets and stackOpenBracket:
-                start = stackOpenBracket.pop()
+                start, wasNegated = stackOpenBracket.pop() # Retrieve the negation state at this level
                 subst = statement[start : index + 1]
 
                 normalizedSubst = removeParentheses(subst)
@@ -271,16 +273,17 @@ def extractPropositions(statement):
                     subStatements.append(normalizedSubst) 
                     processedStatements.add(normalizedSubst)  # Track to avoid duplicates
 
-                    if negateSubStatement: #negates the substatement if there's a ~ prior to it
-                        negatedSubst = "~" + normalizedSubst
-                        if negatedSubst not in processedStatements:
+                    if wasNegated: #negates the substatement if there's a ~ prior to it
+                        negatedSubst = "~ " + normalizedSubst
+                        if negatedSubst not in processedStatements and negatedSubst != statement:
                             subStatements.append(negatedSubst)
                             processedStatements.add(negatedSubst)
                         negateSubStatement = False
 
     normalizedStatement = removeParentheses(statement)
-    if normalizedStatement not in processedStatements:
-        subStatements.append(statement)     
+    
+    if normalizedStatement not in processedStatements or normalizedStatement not in subStatements:
+        subStatements.append(statement) 
     return sorted(propositions), subStatements #sorted para magreturn as list yung propositions 
 
 def evaluateStatement(subStatements, variables):
