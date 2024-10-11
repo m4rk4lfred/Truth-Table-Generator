@@ -1,5 +1,5 @@
 import sys
-import re #helps evaluating statements with multiple spaces using regex
+import re #helps evaluating statements with multiple spaces
 
 connectives = ["~", "^", "v", "->", "<->"] # syntax for connectives used
 vars = ["p", "q", "r"] #
@@ -61,6 +61,9 @@ def userInput():
     # statement = statementFromFile()
     statement = input("Enter a statement: ").lower()
     words = statement.split()
+    statement = re.sub(r'\s+', ' ', statement) #trims multiple statements using regex
+    
+
     
     if syntaxChecker(words) and checkParentheses(words):
         variables, subStatements = extractPropositions(statement)
@@ -218,7 +221,7 @@ def varPopulator(n):
             firstVar.append("True" if (i % 2) == 0 else "False")  
 
     calculateNegations()
-
+#( q v q ) ^ ( q -> ( q v ( q ^ ~ q ) ) )
 def calculateNegations():
     global negationFirstVar, negationSecondVar, negationThirdVar
     # If P is negated, create a list of the opposite values of P (True becomes False and vice versa) same for Q and R. basta awaten u lattan
