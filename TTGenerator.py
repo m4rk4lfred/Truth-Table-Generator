@@ -1,6 +1,8 @@
 import sys
-connectives = ["~", "^", "v", "->", "<->"] 
-vars = ["p", "q", "r"]
+import re #helps evaluating statements with multiple spaces using regex
+
+connectives = ["~", "^", "v", "->", "<->"] # syntax for connectives used
+vars = ["p", "q", "r"] #
 matchingBrackets = {"(": ")"}  
 
 openBrackets = set(matchingBrackets.keys())
@@ -98,7 +100,7 @@ def syntaxChecker(words):
     variables = []  # Store variables used
     connectivesUsed = []  # Store connectives used
 
-    for index, word in enumerate(words):
+    for index, word in enumerate(words): #validates the syntax, checks variables and connectives
         if word.isalpha() and word in vars:  
             variables.append(word)
         elif word in connectives: 
@@ -132,11 +134,11 @@ def syntaxChecker(words):
              valid = False
              return
         elif word[0] == "(" and len(word) > 1: 
-             print("Invalid Statement: Parenthesis should be separated with a space. Maybe try \"( " + " ".join(word[1:].upper())  + "\"?") #guides the user to our program's syntax
+             print("Invalid Statement: Parenthesis should be separated with a space. Maybe try \"( " + " ".join(word[1:].upper())  + " ...\"?") #guides the user to our program's syntax
              valid = False
              return
         elif word[-1] == ")" and len(word) > 1: 
-             print("Invalid Statement: Parenthesis should be separated with a space. Maybe try \"" + " ".join(word[:-1].upper())+ " )\"?") #guides the user to our program's syntax
+             print("Invalid Statement: Parenthesis should be separated with a space. Maybe try \"... " + " ".join(word[:-1].upper())+ " )\"?") #guides the user to our program's syntax
              valid = False
              return
         elif word.isalpha():
@@ -321,11 +323,17 @@ def evalProposition(subStatement, rowValues):
         if 'q' in rowValues:
             subStatement = subStatement.replace("q", rowValues['q'])
         
-        subStatement = subStatement.replace("~", " not ")  
+        subStatement = re.sub(r'~\s*\(([^)]+)\)', r'(not (\1))', subStatement) #this is converted before simple negations
+        # this regex assures that not followed by a compound statement
+        # is converted to ( not ( statement ) ) fixing possible issues with implication using <= instead of not p or q
+        
+        subStatement = subStatement.replace("~", " not ") #replaces simple negation with not
         subStatement = subStatement.replace("^", " and ")    
         subStatement = subStatement.replace("v", " or ")     
         subStatement = subStatement.replace("<->", " is ")   
         subStatement = subStatement.replace("->", " <= ") 
+        subStatement = re.sub(r"not\s+True", "False", subStatement) # implication has issues with -> ~ since True <= not True 
+        subStatement = re.sub(r"not\s+False", "True", subStatement) # or vice versa cant be calculated, this cleans up negations
 
         return str(eval(subStatement)) #error sa boolean output try niyo nga lagyan ng try and exception para mas specific yung error diko madebug
     except Exception as e:
