@@ -1,5 +1,6 @@
 import sys
 import re #helps evaluating statements with multiple spaces
+import os
 
 connectives = ["~", "^", "v", "->", "<->"] # syntax for connectives used
 vars = ["p", "q", "r"] #
@@ -21,45 +22,80 @@ variables = []
 rowCount = 0
 valid = True  # Glinobal ko kase para same sa lahat na ng fucking functions, (cge po)
 
+
+
 # Flag to check if P Q R is negated
 negateP = False 
 negateQ = False
 negateR = False
 
+
 def statementFromFile():
     try:
-      file = open("input.txt","rt")
-      lines = file.readlines()
-      logStatementCount = 0
-      statement = []
+        file = open("input.txt", "rt")
+        lines = file.readlines()          
+        logStatementCount = 0
+        statement = []
 
-      for line in lines:
-         strippedLine = line.strip()
-         if strippedLine != "":
-           statement.append(strippedLine)
-           logStatementCount+=1
-         else:
-            pass
-         
-      if logStatementCount < 2:
-        statementToReturn = statement[0]
-        return statementToReturn.lower()
-      else:
-         raise ValueError(f"We found {logStatementCount}, input 1 statement only")
-              
-    except ValueError as Ve:
-        print(f"Invalid Number of Inputs: {Ve}") 
+        if os.path.getsize("input.txt") == 0:    #os.path.getsize gets the size of the input.txt file. If the file is empty, it will prompt the user to enter a statement in the terminal. Otherwise, it will create the file and write the user's input into it.  
+            print("Text File is currently empty.")
+            file = open("input.txt", "w")
+            file.write(input("Enter statement to store in the text file: ").lower())
+            file.close()
+            return statementFromFile()
+
+        for line in lines:    #It will check the content in the text file and ignore any extra spaces, ensuring that the statement is still read even if it's surrounded by spaces.
+            strippedLine = line.strip()
+            if strippedLine != "":
+                statement.append(strippedLine)
+                logStatementCount += 1
+
+        if logStatementCount < 2:  #If there is only one statement in the text file, it will return the statement in lowercase.
+            statementToReturn = statement[0]
+            return statementToReturn.lower()
+        else:
+            raise ValueError(f"We found {logStatementCount} statements, input only 1 statement.") #If there are more than one statement in the text file, it will raise an error.
+
+    except ValueError as Ve:     #every value error will be caught here
+        print(f"Invalid number of inputs: {Ve}")
         sys.exit()
-    except FileNotFoundError:
-        print("File was not found")
-        sys.exit()
+
+    except FileNotFoundError:     #If the file is not found, it will prompt the user to choose from the following options: 1. Make a new file 2. Provide input via console 3. End program
+        print("File was not found.")
+        print("Please choose from the following:")
+        print("1. Make a new file\n2. Provide input via console\n3. End program")
+
+        while True:
+            try:
+                inputChoice = input("Enter choice: ")
+
+                if inputChoice == "1":
+                    file = open("input.txt", "w")
+                    if os.path.getsize("input.txt") == 0:
+                        file.write(input("Enter a statement: ").lower())
+                        file.close()
+                        return statementFromFile()  #recursion so that the program will read the newly entered statement
+
+                elif inputChoice == "2":
+                    statement = input("Enter a statement: ").lower() 
+                    return statement
+
+                elif inputChoice == "3":
+                    sys.exit()
+
+                else:
+                    raise ValueError("Invalid Input")    #If the user enters an invalid input, it will raise an error.
+                    
+            except ValueError as Ve:
+                print(f"Error found: {Ve}") 
+             
+             
         
-
 def userInput():
     global variables
     subStatements = []
-    # statement = statementFromFile()
-    statement = input("Enter a statement: ").lower()
+    statement = statementFromFile()
+    #statement = input("Enter a statement: ").lower()
     words = statement.split()
     statement = re.sub(r'\s+', ' ', statement) #trims multiple statements using regex
     
@@ -151,6 +187,7 @@ def syntaxChecker(words):
         else:
             print("Invalid Statement: Invalid syntax detected. " + word + " not recgonized")
             valid = False
+           
             return
         
     wordList = [word for word in words if word not in matchingBrackets.keys() and word not in matchingBrackets.values()]
