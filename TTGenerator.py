@@ -1,6 +1,8 @@
 import sys
-connectives = ["~", "^", "v", "->", "<->"] 
-vars = ["p", "q", "r"]
+import re #helps evaluating statements with multiple spaces
+
+connectives = ["~", "^", "v", "->", "<->"] # syntax for connectives used
+vars = ["p", "q", "r"] #
 matchingBrackets = {"(": ")"}  
 
 openBrackets = set(matchingBrackets.keys())
@@ -59,6 +61,9 @@ def userInput():
     # statement = statementFromFile()
     statement = input("Enter a statement: ").lower()
     words = statement.split()
+    statement = re.sub(r'\s+', ' ', statement) #trims multiple statements using regex
+    
+
     
     if syntaxChecker(words) and checkParentheses(words):
         variables, subStatements = extractPropositions(statement)
@@ -98,7 +103,7 @@ def syntaxChecker(words):
     variables = []  # Store variables used
     connectivesUsed = []  # Store connectives used
 
-    for index, word in enumerate(words):
+    for index, word in enumerate(words): #validates the syntax, checks variables and connectives
         if word.isalpha() and word in vars:  
             variables.append(word)
         elif word in connectives: 
@@ -132,11 +137,11 @@ def syntaxChecker(words):
              valid = False
              return
         elif word[0] == "(" and len(word) > 1: 
-             print("Invalid Statement: Parenthesis should be separated with a space. Maybe try \"( " + " ".join(word[1:].upper())  + "\"?") #guides the user to our program's syntax
+             print("Invalid Statement: Parenthesis should be separated with a space. Maybe try \"( " + " ".join(word[1:].upper())  + " ...\"?") #guides the user to our program's syntax
              valid = False
              return
         elif word[-1] == ")" and len(word) > 1: 
-             print("Invalid Statement: Parenthesis should be separated with a space. Maybe try \"" + " ".join(word[:-1].upper())+ " )\"?") #guides the user to our program's syntax
+             print("Invalid Statement: Parenthesis should be separated with a space. Maybe try \"... " + " ".join(word[:-1].upper())+ " )\"?") #guides the user to our program's syntax
              valid = False
              return
         elif word.isalpha():
@@ -216,7 +221,7 @@ def varPopulator(n):
             firstVar.append("True" if (i % 2) == 0 else "False")  
 
     calculateNegations()
-
+#( q v q ) ^ ( q -> ( q v ( q ^ ~ q ) ) )
 def calculateNegations():
     global negationFirstVar, negationSecondVar, negationThirdVar
     # If P is negated, create a list of the opposite values of P (True becomes False and vice versa) same for Q and R. basta awaten u lattan
@@ -228,7 +233,7 @@ def removeParentheses(subst):
 
         while subst.startswith("(") and subst.endswith(")"):
             subst = subst[1:-1].strip()
-        return f"({subst})" if subst else ""
+        return f"( {subst} )" if subst else ""
 
 def extractPropositions(statement):
 
@@ -258,11 +263,13 @@ def extractPropositions(statement):
             propositions.add(char)
 
         if char in openBrackets:
-            stackOpenBracket.append(index)# If open parentheses siya, ilalagay sa stack yung parentheses at yung index bale kung ( p v r) v q 
+            stackOpenBracket.append((index, negateSubStatement))  # If open parentheses siya, ilalagay sa stack yung parentheses at yung index bale kung ( p v r) v q 
+            negateSubStatement = False #this tracks and resets negation status to be retrieved when we reach the end of the statement
+            #this fix errors later on that would happen with ~ ( p ^ ( q v r )) if this statements were not added
                                         
 
         elif char in closeBrackets and stackOpenBracket:
-                start = stackOpenBracket.pop()
+                start, wasNegated = stackOpenBracket.pop() # Retrieve the negation state at this level
                 subst = statement[start : index + 1]
 
                 normalizedSubst = removeParentheses(subst)
@@ -271,20 +278,21 @@ def extractPropositions(statement):
                     subStatements.append(normalizedSubst) 
                     processedStatements.add(normalizedSubst)  # Track to avoid duplicates
 
-                    if negateSubStatement: #negates the substatement if there's a ~ prior to it
-                        negatedSubst = "~" + normalizedSubst
-                        if negatedSubst not in processedStatements:
+                    if wasNegated: #negates the substatement if there's a ~ prior to it
+                        negatedSubst = "~ " + normalizedSubst
+                        if negatedSubst not in processedStatements and negatedSubst != statement:
                             subStatements.append(negatedSubst)
                             processedStatements.add(negatedSubst)
                         negateSubStatement = False
 
     normalizedStatement = removeParentheses(statement)
-    if normalizedStatement not in processedStatements:
-        subStatements.append(statement)     
+    
+    if normalizedStatement not in processedStatements or normalizedStatement not in subStatements:
+        subStatements.append(statement) 
     return sorted(propositions), subStatements #sorted para magreturn as list yung propositions 
 
 def evaluateStatement(subStatements, variables):
-    results = [[] for _ in subStatements] #magcrecreate ng empty list for every substatements para sa mga results nila
+    results = [[] for _ in subStatements] #creates empty list for the results of every subStatements
 
     for i in range(rowCount): 
         if rowCount == 8:
@@ -318,11 +326,17 @@ def evalProposition(subStatement, rowValues):
         if 'q' in rowValues:
             subStatement = subStatement.replace("q", rowValues['q'])
         
-        subStatement = subStatement.replace("~", " not ")  
+        subStatement = re.sub(r'~\s*\(([^)]+)\)', r'(not (\1))', subStatement) #this is converted before simple negations
+        # this regex assures that not followed by a compound statement
+        # is converted to ( not ( statement ) ) fixing possible issues with implication using <= instead of not p or q
+        
+        subStatement = subStatement.replace("~", " not ") #replaces simple negation with not
         subStatement = subStatement.replace("^", " and ")    
         subStatement = subStatement.replace("v", " or ")     
         subStatement = subStatement.replace("<->", " is ")   
         subStatement = subStatement.replace("->", " <= ") 
+        subStatement = re.sub(r"not\s+True", "False", subStatement) # implication has issues with -> ~ since True <= not True 
+        subStatement = re.sub(r"not\s+False", "True", subStatement) # or vice versa cant be calculated, this cleans up negations
 
         return str(eval(subStatement)) #error sa boolean output try niyo nga lagyan ng try and exception para mas specific yung error diko madebug
     except Exception as e:
@@ -339,6 +353,7 @@ def printFinalTable(results, subStatements, variables):
         headers.append("q")
     if 'r' in variables:
         headers.append("r")
+
     if negateP:
         headers.append("~p")
     if negateQ:
@@ -346,11 +361,11 @@ def printFinalTable(results, subStatements, variables):
     if negateR:
         headers.append("~r")
 
-    # Print headers for truth table.
+    # Print variable headers for truth table.
     print(" ".join([f"{header:<10}" for header in headers]), end=" ")
 
     # Print sub-statements in the table header.
-    header = " ".join([f"{sub:<15}" for sub in subStatements])
+    header = " ".join([f"{sub:<{len(sub) + 5}}" for sub in subStatements])
     print(header)
 
     totalWidth = 10 * len(headers) + len(header)
@@ -375,7 +390,7 @@ def printFinalTable(results, subStatements, variables):
         print(" ".join(row), end=" ")
 
         # Print results for each sub-statement.
-        resultRow = " ".join([f"{results[j][i]:<15}" for j in range(len(subStatements))])
+        resultRow = " ".join([f"{results[j][i]:<{len(subStatements[j]) + 7}}" for j in range(len(subStatements))])
         print(resultRow)
         
 # Entry point ng putang-inang user
