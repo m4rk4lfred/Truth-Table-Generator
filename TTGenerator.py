@@ -292,7 +292,7 @@ def extractPropositions(statement):
     return sorted(propositions), subStatements #sorted para magreturn as list yung propositions 
 
 def evaluateStatement(subStatements, variables):
-    results = [[] for _ in subStatements] #magcrecreate ng empty list for every substatements para sa mga results nila
+    results = [[] for _ in subStatements] #creates empty list for the results of every subStatements
 
     for i in range(rowCount): 
         if rowCount == 8:
@@ -353,6 +353,7 @@ def printFinalTable(results, subStatements, variables):
         headers.append("q")
     if 'r' in variables:
         headers.append("r")
+
     if negateP:
         headers.append("~p")
     if negateQ:
@@ -360,11 +361,11 @@ def printFinalTable(results, subStatements, variables):
     if negateR:
         headers.append("~r")
 
-    # Print headers for truth table.
+    # Print variable headers for truth table.
     print(" ".join([f"{header:<10}" for header in headers]), end=" ")
 
     # Print sub-statements in the table header.
-    header = " ".join([f"{sub:<15}" for sub in subStatements])
+    header = " ".join([f"{sub:<{len(sub) + 5}}" for sub in subStatements])
     print(header)
 
     totalWidth = 10 * len(headers) + len(header)
@@ -389,7 +390,7 @@ def printFinalTable(results, subStatements, variables):
         print(" ".join(row), end=" ")
 
         # Print results for each sub-statement.
-        resultRow = " ".join([f"{results[j][i]:<15}" for j in range(len(subStatements))])
+        resultRow = " ".join([f"{results[j][i]:<{len(subStatements[j]) + 7}}" for j in range(len(subStatements))])
         print(resultRow)
         
 # Entry point ng putang-inang user
