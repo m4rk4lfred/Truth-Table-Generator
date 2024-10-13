@@ -3,8 +3,9 @@ import re #helps evaluating statements with multiple spaces
 import os
 
 connectives = ["~", "^", "v", "->", "<->"] # syntax for connectives used
-vars = ["p", "q", "r"] #
+vars = ["p", "q", "r", "T", "F"] # set of propositions and constant values which takes the place of vars when checking or computing
 matchingBrackets = {"(": ")"}  
+precedence = {"~": 3, "^": 2, "v": 2, "->": 1, "<->": 0}  # precedence of operators ~ being highest, <-> being lowest
 
 openBrackets = set(matchingBrackets.keys())
 closeBrackets = set(matchingBrackets.values())
@@ -88,14 +89,57 @@ def statementFromFile():
                     
             except ValueError as Ve:
                 print(f"Error found: {Ve}") 
-             
-             
+                
+
+def injectParentheses(subStatement):
+    
+    output = []  # Stack for building the parenthesized expression
+    operators = []  # Stack to hold operators and apply precedence
+    tokens = subStatement.split()  # Tokenize the input statement
+
+    # Helper function to handle precedence and pop from operator stack
+    def apply_operator():
+        op = operators.pop()
+        if op == "~":
+            operand = output.pop()
+            output.append(f" {op} {operand} ")
+        else:  # Binary operators
+            right = output.pop()
+            left = output.pop()
+            output.append(f"( {left} {op} {right} )")
+
+    # Iterate through the tokens
+    for token in tokens:
+        if token in vars:  # If it is a proposition, add it to output
+            output.append(token)
+        elif token == "~": 
+            operators.append(token)  # Push '~' to operator stack
+        elif token in ["^", "v", "->", "<->"]:
+            while (operators and operators[-1] in connectives and #adds to operator stack if empty or has lower precedence than top most operator
+                   precedence[operators[-1]] >= precedence[token]): #if the previous operator has higher or equal precedence than current operator, operate it
+                apply_operator()
+            operators.append(token)  # Push the current operator to the stack
+        elif token == "(":
+            operators.append(token)
+        elif token == ")":  
+            while operators and operators[-1] != "(": #follows precedence between ( and ), and brackets them 
+                apply_operator() 
+            operators.pop()  # Remove the left parenthesis
+
+    # handles remaining operators from the stack
+    while operators:
+        apply_operator()
+
+    # The final parenthesized expression will be in the output stack
+    return output[0] if output else ""
         
 def userInput():
     global variables
     subStatements = []
-    statement = statementFromFile()
-    #statement = input("Enter a statement: ").lower()
+    #statement = statementFromFile()
+    statement = input("Enter a statement: ").lower()
+    statement = injectParentheses(statement) #injects parenthesis for precedence
+    statement = statement.replace("t", "T").replace("f", "F")
     words = statement.split()
     statement = re.sub(r'\s+', ' ', statement) #trims multiple statements using regex
     
@@ -136,12 +180,15 @@ def checkParentheses(words):
 
 def syntaxChecker(words):
     global valid, negateP, negateQ, negateR
-    variables = []  # Store variables used
+    variables = []  # Store variables used, this excludes T or F
     connectivesUsed = []  # Store connectives used
 
     for index, word in enumerate(words): #validates the syntax, checks variables and connectives
-        if word.isalpha() and word in vars:  
-            variables.append(word)
+        
+        if word.isalpha() and word in vars:
+            if word.islower(): #islower() filters T or F and non constant variables
+             variables.append(word)
+             
         elif word in connectives: 
             connectivesUsed.append(word)
             if word == "~":
@@ -241,6 +288,8 @@ def syntaxChecker(words):
 def varPopulator(n):
     global rowCount 
     rowCount = 2 ** n    # Number ng row sa truth table...tama tong formula dbaaaaaaaa 2^n?
+    if rowCount == 0:
+        rowCount = 1
 
     if n == 3:
         for i in range(rowCount): # alam niyo na to from 0 to 7 kung n = 3 and rowCount is 8
@@ -256,6 +305,8 @@ def varPopulator(n):
     elif n == 1: #prinepare ko na to para sa mga kupal na mag-eenter ng p and not p etc
         for i in range(rowCount):
             firstVar.append("True" if (i % 2) == 0 else "False")  
+            
+    
 
     calculateNegations()
 #( q v q ) ^ ( q -> ( q v ( q ^ ~ q ) ) )
@@ -296,7 +347,7 @@ def extractPropositions(statement):
         if char == "~":
             checkNegatedCompound = True #check if compound is to be negated
             
-        if char.isalpha() and char != 'v':
+        if char.isalpha() and char != 'v' and char.islower():
             propositions.add(char)
 
         if char in openBrackets:
@@ -335,11 +386,14 @@ def evaluateStatement(subStatements, variables):
         if rowCount == 8:
             rowValues = {variables[0]: firstVar[i], variables[1]: secondVar[i], variables[2]: thirdVar[i]}  
 
-        if rowCount == 4:
+        elif rowCount == 4:
             rowValues= {variables[0]: firstVar[i], variables[1]: secondVar[i]}
 
-        if rowCount == 2:
+        elif rowCount == 2:
             rowValues = {variables[0]: firstVar[i]}
+            
+        else:
+            rowValues = {} #when there's no propositions and use of T or F is only used
 
         for index, subStatement in enumerate(subStatements):
             evaluatedResult = evalProposition(subStatement, rowValues) 
@@ -362,6 +416,10 @@ def evalProposition(subStatement, rowValues):
         
         if 'q' in rowValues:
             subStatement = subStatement.replace("q", rowValues['q'])
+            
+        subStatement = re.sub(r"\bT\b", "True", subStatement)  # Convert standalone T to True
+        subStatement = re.sub(r"\bF\b", "False", subStatement)  # Convert standalone F to False
+
         
         subStatement = re.sub(r'~\s*\(([^)]+)\)', r'(not (\1))', subStatement) #this is converted before simple negations
         # this regex assures that not followed by a compound statement
